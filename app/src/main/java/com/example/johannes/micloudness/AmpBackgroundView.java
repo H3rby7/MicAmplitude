@@ -15,8 +15,12 @@ public class AmpBackgroundView extends View{
     int width = 0;
     int height = 0;
     Paint p;
+
+    //TODO: these 2 lines
+    //-----------------------------------------------
     BroadcastReceiver rec;
     final DataHandler handler = new DataHandler();
+    //-----------------------------------------------
 
     public AmpBackgroundView(Context context) {
         super(context);
@@ -40,6 +44,8 @@ public class AmpBackgroundView extends View{
         width = this.getWidth();
         height = this.getHeight();
 
+        //TODO: following part
+        //-----------------------------------------------
         //Create and register receiver on the view to get intents from the SoundMeterService
         rec = new BroadcastReceiver() {
             @Override
@@ -53,6 +59,7 @@ public class AmpBackgroundView extends View{
         IntentFilter Filter = new IntentFilter();
         Filter.addAction("com.example.johannes.micloudness.MIC_VAL");
         this.getContext().registerReceiver(rec, Filter);
+        //-----------------------------------------------
     }
 
     @Override
@@ -71,6 +78,8 @@ public class AmpBackgroundView extends View{
         canvas.drawRect(0, 0, width, height, p);
     }
 
+    //TODO: use this and own implementation
+    //-----------------------------------------------
     //Class to encapsulate the handling a little better
     class DataHandler {
         int maxAmp = 32768; //highest possible value from microphone
@@ -96,4 +105,5 @@ public class AmpBackgroundView extends View{
             }
         }
     }
+    //-----------------------------------------------
 }

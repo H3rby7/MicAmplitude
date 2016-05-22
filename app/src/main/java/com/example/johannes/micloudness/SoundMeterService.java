@@ -17,7 +17,7 @@ public class SoundMeterService extends Service {
     private static final String TAG = "SoundMeterService";
     private SoundMeter meter = new SoundMeter();
     private pollThread t;
-    private final int interval = 30;
+    private final int interval = 20;
 
     private Looper mainServiceLooper;
     private ServiceHandler mainServiceHandler;
