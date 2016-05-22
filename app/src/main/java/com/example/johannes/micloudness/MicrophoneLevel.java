@@ -1,43 +1,62 @@
 package com.example.johannes.micloudness;
 
-import android.support.v7.app.AppCompatActivity;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.IBinder;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
 public class MicrophoneLevel extends AppCompatActivity {
 
-    SoundMeter meter = new SoundMeter();
-    PollThread t;
+    private SoundMeterService.SoundMeterBinder mBoundService;
+    boolean mIsBound;
 
-    class PollThread implements Runnable {
-        String TAG = "pollThread";
-
-        boolean running = true;
-
-        public void stop() {
-            running = false;
-            Log.d(TAG, "stopping");
+    private ServiceConnection mConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            // This is called when the connection with the service has been
+            // established, giving us the service object we can use to
+            // interact with the service.  Because we have bound to a explicit
+            // service that we know is running in our own process, we can
+            // cast its IBinder to a concrete class and directly access it.
+            mBoundService = ((SoundMeterService.SoundMeterBinder) service);
+            mBoundService.startMeasuring();
         }
 
-        @Override
-        public void run() {
-            while (running) {
-                if (meter!=null) {
-                    double amp = meter.getAmplitude();
-                    Log.v(TAG, "measured: " + amp);
-                    synchronized (this) {
-                        try {
-                            this.wait(100);
-                        } catch (InterruptedException e) {}
-                    }
-                } else {
-                    Log.v(TAG, "no meter present");
-                }
-            }
+        public void onServiceDisconnected(ComponentName className) {
+            // This is called when the connection with the service has been
+            // unexpectedly disconnected -- that is, its process crashed.
+            // Because it is running in our same process, we should never
+            // see this happen.
+            mBoundService = null;
         }
+    };
 
+    void doBindService() {
+        // Establish a connection with the service.  We use an explicit
+        // class name because we want a specific service implementation that
+        // we know will be running in our own process (and thus won't be
+        // supporting component replacement by other applications).
+        bindService(new Intent(this, SoundMeterService.class), mConnection, Context.BIND_AUTO_CREATE);
+        mIsBound = true;
+    }
+
+    void doUnbindService() {
+        if (mIsBound) {
+            // Detach our existing connection.
+            mBoundService.stopMeasuring();
+            unbindService(mConnection);
+            mIsBound = false;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        doUnbindService();
     }
 
     @Override
@@ -71,15 +90,11 @@ public class MicrophoneLevel extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        meter.start();
-        t = new PollThread();
-        t.run();
+        doBindService();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        t.stop();
-        meter.stop();
     }
 }

@@ -2,64 +2,68 @@ package com.example.johannes.micloudness;
 
 import android.app.Service;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Binder;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
 import android.util.Log;
 
 public class SoundMeterService extends Service {
 
-    private static final String TAG = "HostService";
+    private static final String TAG = "SoundMeterService";
+    private final IBinder mBinder = new SoundMeterBinder();
+    private SoundMeter meter = new SoundMeter();
+    private pollThread t;
 
-    private Looper mainServiceLooper;
-    private ServiceHandler mainServiceHandler;
+
+
+    private class pollThread implements Runnable {
+        String TAG = "pollThread";
+        boolean running = true;
+
+        public void stop() {
+            running = false;
+        }
+
+        @Override
+        public void run() {
+            while(running) {
+                if (meter != null) {
+                    double amp = meter.getAmplitude();
+                    Log.v(TAG,"measured "+amp);
+                } else {
+                    Log.v(TAG,"no meter");
+                }
+                synchronized (this) {
+                    try {
+                        this.wait(20);
+                    } catch (InterruptedException e) {}
+                }
+            }
+        }
+    }
 
     public SoundMeterService() {
     }
 
-    //Called whenever an Intent comes in.
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null) {
-            Message msg = mainServiceHandler.obtainMessage();
-            msg.obj = intent;
-            mainServiceHandler.sendMessage(msg);
+    public class SoundMeterBinder extends Binder {
+        protected void startMeasuring() {
+            meter.start();
+            if (t==null) {
+                t = new pollThread();
+                t.run();
+            }
         }
 
-        //return value indicates how the system handles the destruction of the service
-        //better said the recreation of it. sticky means recreation by system.
-        return START_STICKY;
-
-    }
-
-    private final class ServiceHandler extends Handler {
-
-        @Override
-        public void handleMessage(Message msg) {
-            String act = ((Intent) msg.obj).getAction();
-            Log.d(TAG, "Message Action=" + act);
-        }
-
-        public ServiceHandler(Looper looper) {
-            super(looper);
+        protected void stopMeasuring() {
+            meter.stop();
+            if (t!=null) {
+                t.stop();
+            }
         }
     }
 
     @Override
     public void onCreate() {
         Log.d(TAG, "Service created");
-
-        //handlerthread, because service would else run in main App thread. Also need the handling thingy
-        HandlerThread thread = new HandlerThread("ServiceStartArguments",
-                HandlerThread.NORM_PRIORITY);
-        thread.start();
-
-        // Get the HandlerThread's Looper and use it for our Handler
-        mainServiceLooper = thread.getLooper();
-        mainServiceHandler = new ServiceHandler(mainServiceLooper);
-
     }
 
     @Override
@@ -72,6 +76,6 @@ public class SoundMeterService extends Service {
     //used to bind service to an activity. dont want that at the moment
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 }
