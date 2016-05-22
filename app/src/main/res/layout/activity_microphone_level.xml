@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:background="#000000">
 
-    <com.example.johannes.micloudness.AmpToBG
+    <com.example.johannes.micloudness.AmpBackgroundView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:id="@+id/color" />

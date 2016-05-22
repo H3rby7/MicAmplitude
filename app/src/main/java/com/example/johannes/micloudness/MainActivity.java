@@ -7,7 +7,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class MicrophoneLevel extends Activity {
+
+//Generic Main Activity Class.
+//Only onCreate and onDestroy have been modified to start/stop the service checking the microphone amplitude
+public class MainActivity extends Activity {
 
     private static final String TAG = "MicLevelActivity";
 

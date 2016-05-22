@@ -1,15 +1,16 @@
 package com.example.johannes.micloudness;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
+import android.media.MediaRecorder;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+
+import java.io.IOException;
 
 public class SoundMeterService extends Service {
 
@@ -21,13 +22,7 @@ public class SoundMeterService extends Service {
     private Looper mainServiceLooper;
     private ServiceHandler mainServiceHandler;
 
-    private BroadcastReceiver rec = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-        }
-    };
-
+    //Handle Intent-Thread Interaction
     private final class ServiceHandler extends Handler {
 
         @Override
@@ -37,7 +32,6 @@ public class SoundMeterService extends Service {
             if (act.equals("com.example.johannes.micloudness.MIC_START")) {
                 startMeasuring();
             } else if (act.equals("com.example.johannes.micloudness.MIC_STOP")) {
-                stopMeasuring();
                 stopSelf();
             }
         }
@@ -47,10 +41,12 @@ public class SoundMeterService extends Service {
         }
     }
 
+    //Thread polling the highest AMP since last read
     private class pollThread extends Thread {
         String TAG = "pollThread";
         boolean running = true;
 
+        //stop method. sets flag to false, loop will quit
         public void stopPoll() {
             running = false;
         }
@@ -61,6 +57,7 @@ public class SoundMeterService extends Service {
                 if (meter != null) {
                     double amp = meter.getAmplitude();
                     Log.v(TAG, "measured " + amp);
+                    //send intent with the value to whoever wants to handle it.
                     Intent intent = new Intent();
                     intent.setAction("com.example.johannes.micloudness.MIC_VAL");
                     intent.putExtra("amp",(int)amp);
@@ -127,6 +124,7 @@ public class SoundMeterService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        stopMeasuring();
     }
 
     //used to bind service to an activity. dont want that at the moment
@@ -134,4 +132,43 @@ public class SoundMeterService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+    //Encapsulated Microphone Calls
+    class SoundMeter {
+        final String TAG = "Meter";
+        private MediaRecorder mRecorder = null;
+
+        public void start() {
+            if (mRecorder == null) {
+                mRecorder = new MediaRecorder();
+                mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                mRecorder.setOutputFile("/dev/null");
+                try {
+                    mRecorder.prepare();
+                } catch (IOException e) {
+                    Log.e(TAG, "ErrorMessage", e);
+                }
+                mRecorder.start();
+            }
+        }
+
+        public void stop() {
+            if (mRecorder != null) {
+                mRecorder.stop();
+                mRecorder.release();
+                mRecorder = null;
+            }
+        }
+
+        public double getAmplitude() {
+            if (mRecorder != null)
+                return  mRecorder.getMaxAmplitude();
+            else
+                return 0;
+
+        }
+    }
+
 }
