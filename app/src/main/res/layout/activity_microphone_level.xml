@@ -4,7 +4,7 @@
     android:layout_height="fill_parent"
     tools:context=".MicrophoneLevel"
     android:orientation="vertical"
-    android:background="#ffffff">
+    android:background="#000000">
 
     <com.example.johannes.micloudness.AmpToBG
         android:layout_width="fill_parent"
