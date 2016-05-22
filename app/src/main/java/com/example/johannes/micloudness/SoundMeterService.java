@@ -12,14 +12,19 @@ public class SoundMeterService extends Service {
     private final IBinder mBinder = new SoundMeterBinder();
     private SoundMeter meter = new SoundMeter();
     private pollThread t;
+    private iHandleAmpChange handler;
+    private final int interval = 100;
+
+    protected interface iHandleAmpChange {
+        void handle(int val);
+    }
 
 
-
-    private class pollThread implements Runnable {
+    private class pollThread extends Thread {
         String TAG = "pollThread";
         boolean running = true;
 
-        public void stop() {
+        public void stopPoll() {
             running = false;
         }
 
@@ -29,12 +34,15 @@ public class SoundMeterService extends Service {
                 if (meter != null) {
                     double amp = meter.getAmplitude();
                     Log.v(TAG,"measured "+amp);
+                    if (handler != null) {
+                        handler.handle((int)amp);
+                    }
                 } else {
                     Log.v(TAG,"no meter");
                 }
                 synchronized (this) {
                     try {
-                        this.wait(20);
+                        this.wait(interval);
                     } catch (InterruptedException e) {}
                 }
             }
@@ -56,9 +64,14 @@ public class SoundMeterService extends Service {
         protected void stopMeasuring() {
             meter.stop();
             if (t!=null) {
-                t.stop();
+                t.stopPoll();
             }
         }
+
+        protected void setHandler(iHandleAmpChange handler) {
+            SoundMeterService.this.handler = handler;
+        }
+
     }
 
     @Override

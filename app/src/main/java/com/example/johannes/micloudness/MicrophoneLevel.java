@@ -1,19 +1,51 @@
 package com.example.johannes.micloudness;
 
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class MicrophoneLevel extends AppCompatActivity {
+public class MicrophoneLevel extends Activity {
 
+    private static final String TAG = "MicLevelActivity";
     private SoundMeterService.SoundMeterBinder mBoundService;
     boolean mIsBound;
+    private AmpToBG color;
+
+    private class dataHandler  implements SoundMeterService.iHandleAmpChange {
+
+        private final int maxAmp = 32768;
+        private final int min = 20;
+        private final int max = 255;
+        private final double changeThresh = 0.1;
+
+        private int lastVal = 0;
+
+
+        dataHandler() {}
+
+        @Override
+        public void handle(int val) {
+            if (val>lastVal*(1+changeThresh)||val<lastVal*(1-changeThresh)) {
+                if (color != null) {
+                    int alph = (int) ((val / maxAmp) * 255);
+                    if (alph < min) {
+                        alph = min;
+                    } else if (alph > max) {
+                        alph = max;
+                    }
+                    //color.setColor(Color.argb(alph, 255, 255, 255));
+                }
+                lastVal = val;
+            }
+        }
+    }
 
     private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -23,6 +55,7 @@ public class MicrophoneLevel extends AppCompatActivity {
             // service that we know is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
             mBoundService = ((SoundMeterService.SoundMeterBinder) service);
+            mBoundService.setHandler(new dataHandler());
             mBoundService.startMeasuring();
         }
 
@@ -57,12 +90,17 @@ public class MicrophoneLevel extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         doUnbindService();
+        Log.d(TAG, "onDestroy");
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_microphone_level);
+
+        doBindService();
+        color = (AmpToBG)findViewById(R.id.color);
+
     }
 
     @Override
@@ -90,11 +128,13 @@ public class MicrophoneLevel extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        doBindService();
+        Log.d(TAG,"onStart");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        Log.d(TAG, "onStop");
     }
+
 }
