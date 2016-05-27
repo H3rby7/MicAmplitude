@@ -44,6 +44,8 @@ public class AmpBackgroundView extends View{
         width = this.getWidth();
         height = this.getHeight();
 
+        p.setColor(Color.rgb(255,255,255));
+
         //TODO: following part
         //-----------------------------------------------
         //Create and register receiver on the view to get intents from the SoundMeterService
@@ -68,6 +70,17 @@ public class AmpBackgroundView extends View{
         // adjust w and h so we still draw the entire canvas
         width = xNew;
         height = yNew;
+    }
+
+    protected void setColor(int c) {
+        this.p.setColor(c);
+    }
+
+    protected void setBounds(int low, int high) {
+        if (handler!=null) {
+            handler.max = (int) (high*2.55);
+            handler.min = (int) (low*2.55);
+        }
     }
 
     @Override
@@ -99,7 +112,7 @@ public class AmpBackgroundView extends View{
                     alph = max;
                 }
                 //Change Color of the next draw
-                p.setColor(Color.rgb(alph, alph,alph));
+                p.setAlpha(alph);
                 invalidate();
                 lastVal = val;
             }
